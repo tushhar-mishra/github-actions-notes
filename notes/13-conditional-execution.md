@@ -105,10 +105,12 @@ jobs:
     steps:
       - name: Run tests
         id: tests                                   # id lets later steps read this step's result
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}   # attacker-controllable text: pass via env, never inline
         run: |
           echo "running tests"
           # simulate failure when commit message contains [fail]
-          if [[ "${{ github.event.head_commit.message }}" == *"[fail]"* ]]; then exit 1; fi
+          if [[ "$COMMIT_MSG" == *"[fail]"* ]]; then exit 1; fi
 
       - name: Notify on failure
         if: failure()

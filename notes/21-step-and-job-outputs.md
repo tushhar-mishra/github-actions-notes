@@ -116,7 +116,7 @@ JOB OUTPUT
 - With a **matrix** (topic 26), every matrix job writes the same job output name, and **the last one to finish wins**.
 - Only jobs listed in `needs` can read `needs.<job>.outputs`. That includes jobs further up the chain only if they're listed **directly**.
 
-> ⚠️ **Deprecated syntax.** Old tutorials set outputs with `echo "::set-output name=deployment_url::https://…"` (and `::save-state::`). These were **deprecated in October 2022** because a malicious log line could fake them, and GitHub has since **disabled** them on runners. **Always use `>> "$GITHUB_OUTPUT"`** (and `$GITHUB_STATE`). None of your original notes used the old syntax.
+> ⚠️ **Deprecated syntax.** Old tutorials set outputs with `echo "::set-output name=deployment_url::https://…"` (and `::save-state::`). These were **deprecated in October 2022** because a malicious log line could fake them. ⚠️ *Corrected:* GitHub announced it would disable them, then **postponed the removal**; they still work but print a deprecation warning, and could be switched off at any time. (`set-env` and `add-path` are the ones that really are disabled.) **Always use `>> "$GITHUB_OUTPUT"`** (and `$GITHUB_STATE`). None of your original notes used the old syntax.
 
 ---
 
@@ -527,7 +527,7 @@ In the workflow graph you'll see `deploy-job → notification-job`, two jobs on 
 - **Step output:** `echo "k=v" >> "$GITHUB_OUTPUT"` in a step with an `id` → `steps.<id>.outputs.k`, same job only.
 - **Job output:** map it in `jobs.<job>.outputs` → `needs.<job>.outputs.k` in jobs that `need` it.
 - Outputs are **strings**, limited in size, secret-filtered, and **values not files**.
-- `::set-output` is **deprecated and disabled**. Use `$GITHUB_OUTPUT`.
+- `::set-output` is **deprecated** (still works with a warning; removal postponed). Use `$GITHUB_OUTPUT`.
 - Choose the output type by **which boundary the value crosses**.
 
 **Interview questions**

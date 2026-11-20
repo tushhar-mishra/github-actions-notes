@@ -18,22 +18,39 @@ jobs:
     timeout-minutes: 20
     environment: prod
 
-    # Deploy only when an automated DEV-approved PR is merged.
+    # Deploy only when an automated DEV-approved PR is merged. The proof that DEV tested this exact
+    # commit is verified in the first step (a check run), not by searching the editable PR body.
     if: >-
       github.event.pull_request.merged == true &&
-      github.event.pull_request.user.login == 'github-actions[bot]' &&
-      contains(github.event.pull_request.body, github.event.pull_request.head.sha)
+      github.event.pull_request.user.login == 'github-actions[bot]'
 
     permissions:
       contents: read
       id-token: write
+      checks: read
 
     steps:
+      - name: Verify DEV deployed this exact commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # Only a successful check run created by the github-actions app counts.
+          ok=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/check-runs?check_name=cwvj/deployed-to-dev" \
+            --jq '[.check_runs[] | select(.app.slug == "github-actions" and .conclusion == "success")] | length')
+          if [ "$ok" -lt 1 ]; then
+            echo "::error::Commit ${SHA} has no successful DEV deployment record. Refusing to deploy to PROD."
+            exit 1
+          fi
+          echo "DEV deployment verified for ${SHA}"
+
       # Check out the merged main revision for production manifests.
       - name: Check out merged main
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -108,3 +125,10 @@ jobs:
             --retry 10 --retry-connrefused \
             --max-time 10 \
             http://127.0.0.1:18080/
+
+      # Audit fix: automatic rollback if the rollout or the smoke test fails.
+      - name: Roll back PROD on failure
+        if: failure()
+        run: |
+          kubectl rollout undo deployment/cwvj-backend -n prod || true
+          kubectl rollout undo deployment/cwvj-frontend -n prod || true

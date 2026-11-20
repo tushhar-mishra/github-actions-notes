@@ -14,4 +14,4 @@ metadata:
     description: "DNS alias for the shared Amazon RDS PostgreSQL instance"
 spec:
   type: ExternalName
-  externalName: cwvj-mega-postgres.c7m8gq4y4w13.ap-south-1.rds.amazonaws.com
+  externalName: <YOUR_RDS_ENDPOINT>

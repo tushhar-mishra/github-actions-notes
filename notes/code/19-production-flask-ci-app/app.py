@@ -1,7 +1,9 @@
 from flask import Flask, jsonify
+import logging
 import os
 
 app = Flask(__name__)
+app.logger.setLevel(logging.INFO)  # Flask defaults to WARNING, which would hide the info logs below
 
 @app.get("/")
 def home():

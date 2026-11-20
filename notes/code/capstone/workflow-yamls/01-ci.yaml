@@ -6,31 +6,37 @@ on:
       - 'feature/**'
       - 'bugfix/**'
       - 'hotfix/**'
-    paths:
-      - 'cwvj-3tier-mega-project/frontend/**'
-      - 'cwvj-3tier-mega-project/backend/**'
-      - '.github/workflows/**'
-      - 'kubernetes/**'
+    # Audit fix: no `paths:` filter. These jobs are REQUIRED checks (Stage 14); with a paths filter,
+    # a docs-only push never runs them and the PR waits forever on "Expected" (topics 10, 30).
+    # To skip work for unrelated changes, detect changes inside a job and still report success.
 
   workflow_dispatch:
 
 concurrency:
   group: cwvj-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: true   # safe because the ECR push steps below are idempotent (re-runs skip an existing tag)
+
+# Audit fix: least privilege for every job by default. Jobs that need more (OIDC) ask for it.
+permissions:
+  contents: read
 
 jobs:
   trivy-scan-job:
     name: Repository Filesystem Security Scan
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
 
     steps:
       - name: Checkout source code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # don't leave the token in .git/config for later steps
 
       - name: Run Trivy repository filesystem scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
+          scanners: vuln,secret,misconfig   # audit fix: misconfig (IaC/Dockerfile/K8s) is OFF by default
           scan-ref: ${{ github.workspace }}
           severity: HIGH,CRITICAL
           exit-code: '1'
@@ -38,6 +44,7 @@ jobs:
   backend-job:
     name: Backend Build, Test and Quality Analysis
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
     needs: trivy-scan-job
 
     defaults:
@@ -47,6 +54,8 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # don't leave the token in .git/config for later steps
 
       - name: Set up Java
         uses: actions/setup-java@v6
@@ -92,6 +101,7 @@ jobs:
   backend-image-build-scan-job:
     name: Build and Scan Backend Container Image
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
     needs: backend-job
 
     outputs:
@@ -101,6 +111,8 @@ jobs:
       # Checkout the repository so the Dockerfile and pom.xml are available.
       - name: Checkout source code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # don't leave the token in .git/config for later steps
 
       # Download the exact JAR produced and validated by the backend job.
       - name: Download backend JAR
@@ -156,7 +168,7 @@ jobs:
 
       # Display the locally built image for verification.
       - name: Verify backend container image
-        run: docker images cwvj-mega-backend
+        run: docker image inspect --format '{{.Id}}' "cwvj-mega-backend:${{ steps.image-tag.outputs.image_tag }}"   # fails if missing (docker images didn't)
 
       # Scan the container image for HIGH and CRITICAL vulnerabilities.
       - name: Scan backend container image with Trivy
@@ -180,10 +192,12 @@ jobs:
           name: backend-container-image
           path: cwvj-mega-backend.tar
           if-no-files-found: error
+          retention-days: 1   # only needed by the next job; the default 90 days costs storage
 
   backend-ecr-push-job:
     name: Push Backend Image to Amazon ECR
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
     needs: backend-image-build-scan-job
 
     permissions:
@@ -204,7 +218,7 @@ jobs:
       - name: Verify backend container image
         env:
           IMAGE_TAG: ${{ needs.backend-image-build-scan-job.outputs.image-tag }}
-        run: docker images cwvj-mega-backend:${IMAGE_TAG}
+        run: docker image inspect --format '{{.Id}}' "cwvj-mega-backend:${IMAGE_TAG}"
 
       # Authenticate to AWS using GitHub OIDC and the IAM role created earlier.
       - name: Configure AWS credentials
@@ -241,13 +255,19 @@ jobs:
         run: |
           ECR_REGISTRY="${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com"
 
-          docker push \
-            "${ECR_REGISTRY}/cwvj-mega-backend:${IMAGE_TAG}"
+          # Idempotent: tags are immutable in ECR, so a re-run of the same commit must not fail on "tag exists".
+          if aws ecr describe-images --repository-name cwvj-mega-backend \
+               --image-ids imageTag="${IMAGE_TAG}" >/dev/null 2>&1; then
+            echo "cwvj-mega-backend:${IMAGE_TAG} already in ECR, skipping push"
+          else
+            docker push "${ECR_REGISTRY}/cwvj-mega-backend:${IMAGE_TAG}"
+          fi
 
 
   frontend-job:
     name: Frontend Build, Test and Quality Analysis
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
     needs: trivy-scan-job
 
     defaults:
@@ -257,6 +277,8 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # don't leave the token in .git/config for later steps
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -314,6 +336,7 @@ jobs:
   frontend-image-build-scan-job:
     name: Build and Scan Frontend Container Image
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
     needs: frontend-job
 
     outputs:
@@ -324,6 +347,8 @@ jobs:
       # Checkout the repository so the Dockerfile and package.json are available.
       - name: Checkout source code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # don't leave the token in .git/config for later steps
 
       # Download the exact frontend build produced and validated by the frontend job.
       - name: Download frontend build
@@ -369,7 +394,7 @@ jobs:
 
       # Display the locally built container image for verification.
       - name: Verify frontend container image
-        run: docker images cwvj-mega-frontend
+        run: docker image inspect --format '{{.Id}}' "cwvj-mega-frontend:${{ steps.image-tag.outputs.image_tag }}"   # fails if missing (docker images didn't)
 
       # Scan the container image for HIGH and CRITICAL vulnerabilities.
       - name: Scan frontend container image with Trivy
@@ -393,10 +418,12 @@ jobs:
           name: frontend-container-image
           path: cwvj-mega-frontend.tar
           if-no-files-found: error
+          retention-days: 1
 
   frontend-ecr-push-job:
     name: Push Frontend Image to Amazon ECR
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
     needs: frontend-image-build-scan-job
 
     permissions:
@@ -417,7 +444,7 @@ jobs:
       - name: Verify frontend container image
         env:
           IMAGE_TAG: ${{ needs.frontend-image-build-scan-job.outputs.image-tag }}
-        run: docker images cwvj-mega-frontend:${IMAGE_TAG}
+        run: docker image inspect --format '{{.Id}}' "cwvj-mega-frontend:${IMAGE_TAG}"
 
       # Authenticate to AWS using GitHub OIDC and the IAM role created earlier.
       - name: Configure AWS credentials
@@ -454,5 +481,9 @@ jobs:
         run: |
           ECR_REGISTRY="${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com"
 
-          docker push \
-            "${ECR_REGISTRY}/cwvj-mega-frontend:${IMAGE_TAG}"
+          if aws ecr describe-images --repository-name cwvj-mega-frontend \
+               --image-ids imageTag="${IMAGE_TAG}" >/dev/null 2>&1; then
+            echo "cwvj-mega-frontend:${IMAGE_TAG} already in ECR, skipping push"
+          else
+            docker push "${ECR_REGISTRY}/cwvj-mega-frontend:${IMAGE_TAG}"
+          fi

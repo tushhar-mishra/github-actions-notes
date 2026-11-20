@@ -57,10 +57,15 @@ Passed but wrong result?  → contexts/expressions evaluated differently than yo
 - **Dump contexts** to see the real values:
 
   ```yaml
-  - run: |
-      echo '${{ toJSON(github.event) }}' | head -c 4000
-      echo '${{ toJSON(needs) }}'
-      echo '${{ toJSON(steps) }}'
+  - env:                                         # via env: event data contains attacker-controlled text,
+      EVENT_JSON: ${{ toJSON(github.event) }}     # and a ' in a PR title would break out of echo '...'
+      NEEDS_JSON: ${{ toJSON(needs) }}
+      STEPS_JSON: ${{ toJSON(steps) }}
+    run: |
+      printf '%s
+' "$EVENT_JSON" | head -c 4000
+      printf '%s
+' "$NEEDS_JSON" "$STEPS_JSON"
   ```
 
   (Use `env:` for untrusted events, topic 37.)

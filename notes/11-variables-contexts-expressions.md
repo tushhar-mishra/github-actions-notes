@@ -220,7 +220,9 @@ if: ${{ github.event_name == 'push' }}
 🆕 **Debug tip:** dump a whole context to see what's inside:
 
 ```yaml
-- run: echo '${{ toJSON(github.event) }}'
+- env:
+    EVENT_JSON: ${{ toJSON(github.event) }}   # via env: the event holds attacker-controlled text (PR titles, branch names)
+  run: echo "$EVENT_JSON"
 ```
 
 ### 3. Expressions (`${{ }}`)

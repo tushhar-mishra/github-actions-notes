@@ -112,16 +112,16 @@ The process (from the capstone):
   "Statement": [{
     "Effect": "Allow",
     "Principal": {
-      "Federated": "arn:aws:iam::497613475050:oidc-provider/token.actions.githubusercontent.com"
+      "Federated": "arn:aws:iam::<YOUR_ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
     },
     "Action": "sts:AssumeRoleWithWebIdentity",
     "Condition": {
       "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
       "StringLike": {
         "token.actions.githubusercontent.com:sub": [
-          "repo:CloudWithVarJosh@146525273/mega-project-demo@1386577280:ref:refs/heads/feature/*",
-          "repo:CloudWithVarJosh@146525273/mega-project-demo@1386577280:ref:refs/heads/bugfix/*",
-          "repo:CloudWithVarJosh@146525273/mega-project-demo@1386577280:ref:refs/heads/hotfix/*"
+          "repo:<OWNER>@<OWNER_ID>/<REPO>@<REPO_ID>:ref:refs/heads/feature/*",
+          "repo:<OWNER>@<OWNER_ID>/<REPO>@<REPO_ID>:ref:refs/heads/bugfix/*",
+          "repo:<OWNER>@<OWNER_ID>/<REPO>@<REPO_ID>:ref:refs/heads/hotfix/*"
         ]
       }
     }
@@ -134,7 +134,7 @@ The process (from the capstone):
 | `Principal.Federated` | Trust tokens from **this** registered GitHub OIDC provider in this AWS account. |
 | `aud = sts.amazonaws.com` | The token must be meant for AWS STS. |
 | `sub` patterns | Only these **repos and branches** may assume the role. `StringLike` allows `*`. |
-| `Owner@146525273/repo@1386577280` | The newer **immutable subject** format that includes the numeric **owner ID** and **repository ID**. It stops someone who deletes and recreates a repo with the same name (or renames an org) from matching your policy. The classic format is `repo:OWNER/REPO:…`. **Print your token's claims (below) and copy the exact `sub`** before writing the policy. |
+| `Owner@146525273/repo@1386577280` | The newer **immutable subject** format that includes the numeric **owner ID** and **repository ID**. It stops someone who deletes and recreates a repo with the same name (or renames an org) from matching your policy. The classic format is `repo:OWNER/REPO:…`. **Print your token's claims (below) and copy the exact `sub`** before writing the policy. ⚠️ *Whether your repo gets the ID-based or the classic format depends on the repo/org OIDC settings: never assume, copy it from a real token.* |
 
 The **EKS deploy role** in the capstone also allows `…:environment:dev` and `…:environment:prod`. When a job declares `environment:`, the `sub` claim becomes `repo:…:environment:<name>` **instead of** the `ref` form. That's how a cloud role can be locked to the **protected prod environment** (topic 28).
 
@@ -175,8 +175,8 @@ Run aws-actions/configure-aws-credentials@v6
 Run aws sts get-caller-identity
 {
     "UserId": "AROA…:GitHubActions",
-    "Account": "497613475050",
-    "Arn": "arn:aws:sts::497613475050:assumed-role/CWVJGitHubActionsECRPushRole/GitHubActions"
+    "Account": "<YOUR_ACCOUNT_ID>",
+    "Arn": "arn:aws:sts::<YOUR_ACCOUNT_ID>:assumed-role/CWVJGitHubActionsECRPushRole/GitHubActions"
 }
 Run aws ecr get-login-password --region "ap-south-1" | docker login …
   Login Succeeded

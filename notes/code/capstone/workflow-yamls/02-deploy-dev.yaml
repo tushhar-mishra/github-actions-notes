@@ -22,18 +22,25 @@ jobs:
     timeout-minutes: 15
     environment: dev
 
+    # Audit fix: also require that CI ran for a PUSH to THIS repository. Without these checks the job is
+    # only safe while CI has no pull_request trigger: adding one later would let a fork PR's successful
+    # CI run start this privileged job (id-token: write) on the fork's code (workflow_run escalation).
     if: >-
-      github.event.workflow_run.conclusion == 'success'
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
 
     permissions:
       contents: read
       id-token: write
+      checks: write      # to record "deployed to DEV" on the commit (read by the PROD workflow)
 
     steps:
       - name: Check out deployment manifests
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -109,6 +116,26 @@ jobs:
             --retry 10 --retry-connrefused \
             --max-time 10 \
             http://127.0.0.1:18080/
+
+      # Audit fix: record the DEV result as a CHECK RUN on the exact commit. The PROD workflow verifies it.
+      # (The old proof was the commit SHA written in the PR body, which anyone with write access can edit.
+      # Check runs can only be created by GitHub Apps, here the github-actions app via GITHUB_TOKEN.)
+      - name: Record DEV deployment on the commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/check-runs" \
+            -f name='cwvj/deployed-to-dev' -f head_sha="$SHA" \
+            -f status=completed -f conclusion=success \
+            -f 'output[title]=Deployed to DEV and smoke-tested' \
+            -f "output[summary]=Run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Roll back DEV on failure
+        if: failure()
+        run: |
+          kubectl rollout undo deployment/cwvj-backend -n dev || true
+          kubectl rollout undo deployment/cwvj-frontend -n dev || true
 
   #Calling workflow
   create-pull-request-job:

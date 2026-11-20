@@ -18,11 +18,12 @@
                 "ecr:InitiateLayerUpload",
                 "ecr:BatchGetImage",
                 "ecr:PutImage",
-                "ecr:UploadLayerPart"
+                "ecr:UploadLayerPart",
+                "ecr:DescribeImages"
             ],
             "Resource": [
-                "arn:aws:ecr:ap-south-1:497613475050:repository/cwvj-mega-backend",
-                "arn:aws:ecr:ap-south-1:497613475050:repository/cwvj-mega-frontend"
+                "arn:aws:ecr:ap-south-1:<YOUR_ACCOUNT_ID>:repository/cwvj-mega-backend",
+                "arn:aws:ecr:ap-south-1:<YOUR_ACCOUNT_ID>:repository/cwvj-mega-frontend"
             ]
         }
     ]
