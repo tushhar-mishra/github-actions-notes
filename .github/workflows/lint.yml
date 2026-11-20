@@ -46,11 +46,14 @@ jobs:
         run: |
           find notes/code \( -name '*.yml' -o -name '*.yaml' \) \
             -not -name 'action.yml' -not -path '*/kubernetes/*' -not -path '*/node_modules/*' \
-            -not -name 'eks-config.yaml' | sort > workflow-files.txt
+            -not -path '*/cwvj-3tier-mega-project/*' -not -name 'eks-config.yaml' | sort > workflow-files.txt
           cat workflow-files.txt
       # actionlint also runs shellcheck on every run: script (shellcheck is inside the image)
+      # -ignore: demo workflows call ./.github/workflows/... paths that only exist in the course's original repo layout
       - name: actionlint
-        run: xargs docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color < workflow-files.txt
+        run: |
+          xargs docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color \
+            -ignore 'could not read reusable workflow file' < workflow-files.txt
       # zizmor: GitHub Actions security audit (injection, unpinned actions, excessive permissions, ...)
       - name: zizmor
         run: xargs pipx run zizmor==1.32.0 --offline --min-severity medium < workflow-files.txt

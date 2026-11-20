@@ -16,7 +16,7 @@ jobs:
         run: |
           echo "Deploying application..."
           sleep 3
-          echo "deployment_url=https://cwvj-demo.com" >> $GITHUB_OUTPUT
+          echo "deployment_url=https://cwvj-demo.com" >> "$GITHUB_OUTPUT"
 
     outputs:
       deployment_url: ${{ steps.deploy.outputs.deployment_url }}
