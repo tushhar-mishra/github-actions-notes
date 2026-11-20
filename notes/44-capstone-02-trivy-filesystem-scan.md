@@ -56,6 +56,7 @@ In `.github/workflows/ci.yaml`, **delete `workflow-foundation-job`** and add thi
         with:
           scan-type: fs
           scan-ref: ${{ github.workspace }}
+          scanners: vuln,secret,misconfig   # ⚠️ corrected: without this, misconfig (IaC) checks are OFF
           severity: HIGH,CRITICAL
           exit-code: '1'
 ```

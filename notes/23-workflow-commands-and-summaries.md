@@ -31,7 +31,7 @@ A running step can **send instructions to the runner** in two ways:
    | `::debug::Message` | Shown only when debug logging is on (topic 39) |
    | `::stop-commands::TOKEN` … `::TOKEN::` | Temporarily turn off command parsing (for printing untrusted text) |
 
-> ⚠️ **Deprecated and disabled:** `::set-output`, `::save-state`, `::set-env` and `::add-path`. `set-env` and `add-path` were disabled in **2020** after a security flaw (CVE-2020-15228: any log line, even from untrusted input, could set variables). `set-output` and `save-state` were deprecated in **October 2022**. Use the environment files instead. Old blog posts still show these. Don't copy them.
+> ⚠️ **Deprecated and disabled:** `::set-output`, `::save-state`, `::set-env` and `::add-path`. `set-env` and `add-path` were disabled in **2020** after a security flaw (CVE-2020-15228: any log line, even from untrusted input, could set variables). `set-output` and `save-state` were deprecated in **October 2022**; their removal was postponed, so today they still run with a deprecation warning. Use the environment files instead. Old blog posts still show these. Don't copy them.
 
 ---
 
@@ -198,7 +198,7 @@ On the run page:
 1. Run the demo and compare it with the sample. Open the **Summary** page and the **Annotations** box.
 2. Remove the `uuidgen` / `stop-commands` lines and re-run. The fake title now becomes a real **warning annotation**. That's the injection risk.
 3. Write a 3-line value to `$GITHUB_OUTPUT` **without** the delimiter syntax and read the `Invalid format` error.
-4. Add `- run: echo "::set-output name=x::y"` and read the error (disabled command).
+4. Add `- run: echo "::set-output name=x::y"` and read the **deprecation warning** in the annotations (the command still works today; compare with `::set-env`, which is rejected).
 
 ---
 
@@ -231,7 +231,7 @@ On the run page:
 
 - Environment files: `GITHUB_ENV` (later steps' env), `GITHUB_OUTPUT` (step outputs), `GITHUB_PATH` (PATH), `GITHUB_STEP_SUMMARY` (Markdown summary), `GITHUB_STATE` (action post steps).
 - Workflow commands: `::error/warning/notice::`, `::group::`, `::add-mask::`, `::debug::`, `::stop-commands::`.
-- `set-output`, `save-state`, `set-env` and `add-path` are **deprecated or disabled**.
+- `set-env` and `add-path` are **disabled**; `set-output` and `save-state` are **deprecated** (still work with a warning).
 - Multi-line values need the `<<DELIMITER` syntax.
 
 **Interview questions**

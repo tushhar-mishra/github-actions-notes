@@ -34,7 +34,8 @@ deploy job (environment: dev) → OIDC sub = repo:…:environment:dev
 - **Access entries vs the old `aws-auth` ConfigMap:** access entries are managed through the EKS API (auditable, no YAML editing in `kube-system`). Check the cluster's **authentication mode** (`API` or `API_AND_CONFIG_MAP`) first.
 - An access entry **maps** an identity to groups. It **grants nothing** until RBAC binds the group.
 - The environment-based `sub` is why the trust policy lists `…:environment:dev` / `…:environment:prod` (topics 28, 36).
-- File: [`code/capstone/infrastructure/CWVJGitHubActionsEKSDeployPolicy.json`](code/capstone/infrastructure/CWVJGitHubActionsEKSDeployPolicy.json), roles `…EKSDeployRole.json`.
+- Files: [`CWVJGitHubActionsEKSDeployPolicy.json`](code/capstone/infrastructure/CWVJGitHubActionsEKSDeployPolicy.json), and one trust policy **per environment**: [`CWVJGitHubActionsEKSDeployDevRole.json`](code/capstone/infrastructure/CWVJGitHubActionsEKSDeployDevRole.json) and [`CWVJGitHubActionsEKSDeployProdRole.json`](code/capstone/infrastructure/CWVJGitHubActionsEKSDeployProdRole.json).
+- ⚠️ **Corrected (code):** the course's code had a single `…EKSDeployRole.json` that trusted feature/bugfix/hotfix **branch** refs **and** both `environment:dev` and `environment:prod`. Any feature-branch job could then assume a prod-capable role, and DEV and PROD would share one access entry, so the RBAC split below would mean nothing. Use exactly one `sub` per role with `StringEquals` (no wildcards), as this topic describes.
 
 ## Workflow YAML / commands: build it step by step
 

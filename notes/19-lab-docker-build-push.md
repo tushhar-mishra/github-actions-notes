@@ -311,7 +311,7 @@ if __name__ == "__main__":
     )
 ```
 
-It exposes `/` and `/health`, listens on 5000, runs in a container, and **writes logs** you can read with `docker logs`. Health checks are used for smoke tests, start-up validation, readiness checks and deployment verification.
+It exposes `/` and `/health`, listens on 5000, runs in a container, and **writes logs** you can read with `docker logs`. ⚠️ Flask's logger defaults to level **WARNING**, so `app.logger.info(...)` lines are dropped unless you lower the level: add `import logging` and `app.logger.setLevel(logging.INFO)` after `app = Flask(__name__)` (done in `code/19-production-flask-ci-app/app.py`). Health checks are used for smoke tests, start-up validation, readiness checks and deployment verification.
 
 > **Operational note:** health-check endpoints are one of the most common ways to confirm start-up in automated pipelines.
 

@@ -14,6 +14,7 @@ jobs:
   create-pull-request-job:
     name: Create Pull Request
     runs-on: ubuntu-26.04
+    timeout-minutes: 10
 
     permissions:
       contents: read
@@ -21,9 +22,10 @@ jobs:
 
     steps:
       - name: Check out the deployed branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.head_branch }}
+          persist-credentials: false
 
       - name: Verify deployed commit
         env:

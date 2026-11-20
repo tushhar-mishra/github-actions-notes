@@ -381,9 +381,9 @@ Minimum Retention (Workflow Level): 1 Day
 Maximum Retention (Workflow Level): 90 Days
 ```
 
-`retention-days` accepts **1–90** and can't exceed the repo/org limit.
+`retention-days` accepts **1 up to the repo/org retention limit** (90 for public repos; admins can raise it up to 400 days for private repos).
 
-> **Note:** at the **workflow level**, `retention-days` maxes out at **90 days** for one artifact. At the **repository level**, admins can set **artifact and log retention** up to **400 days** (private repos on paid plans. Public repos stay at 90). The repo-level policy decides the effective retention.
+> **Note:** the default is 90 days. At the **repository level**, admins can set **artifact and log retention** up to **400 days** (private repos on paid plans. Public repos stay at 90). The repo-level policy decides the effective retention.
 
 > **Retention and best practices**
 >
@@ -514,7 +514,7 @@ The capstone uses `if-no-files-found: error` when it saves the scanned Docker im
 
 - Artifacts = **files** saved from a run (outputs = small values). They survive the runner.
 - `upload-artifact` (name + path) → `download-artifact` (name) in another job, run, or a human download.
-- Default retention 90 days (workflow max 90, repo up to 400). Use short retention.
+- Default retention 90 days; `retention-days` can go up to the repo/org limit (up to 400 on private repos). Use short retention.
 - v4+ artifacts are **immutable**: unique names per upload. v3 is dead.
 - Not a long-term repository: publish releases to Artifactory, Nexus, S3 or GitHub Releases.
 
@@ -525,4 +525,4 @@ The capstone uses `if-no-files-found: error` when it saves the scanned Docker im
 2. **Q: Outputs vs artifacts?**
    A: Outputs are small string values passed through expressions. Artifacts are files stored by GitHub and downloadable by jobs and people.
 3. **Q: How long are artifacts kept?**
-   A: 90 days by default. Configurable per upload (1–90) and per repo (up to 400 for private repos).
+   A: 90 days by default. Configurable per upload (1 up to the repo limit) and per repo (up to 400 for private repos).

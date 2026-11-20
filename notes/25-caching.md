@@ -282,10 +282,11 @@ jobs:
   false → Cache Restored Using Restore Keys
            (No Exact Key Match Found)
 
-  ''     → No Cache Restored (Cache Miss)
+  ⚠️ Corrected for actions/cache v4+: `false` is ALSO what a complete miss returns,
+     so `cache-hit != 'true'` is the only reliable test for "not an exact hit".
   ```
 
-  Without restore keys you'll see only `Cache Hit:` (blank = miss) or `Cache Hit: true`. After a miss, once the job **succeeds**, GitHub creates a **new cache** for that key, and later jobs and runs with the same key restore it.
+  To tell a partial (restore-key) hit from a full miss, use the `cache-matched-key` output (empty on a miss). After a miss, once the job **succeeds**, GitHub creates a **new cache** for that key, and later jobs and runs with the same key restore it.
 
   ```text
   First Workflow Run

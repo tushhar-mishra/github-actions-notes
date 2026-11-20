@@ -3,16 +3,22 @@ name: 01 - Artifacts Demo
 on:
   workflow_dispatch:
 
+# Least privilege: these demo jobs only read the repo.
+permissions:
+  contents: read
+
 jobs:
   flask-ci-job:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Build Docker Image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: false
@@ -36,7 +42,7 @@ jobs:
           docker logs cwvj-flask-container > container-logs.txt
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: flask-ci-artifacts
           path: |
@@ -51,7 +57,7 @@ jobs:
 
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: flask-ci-artifacts
 

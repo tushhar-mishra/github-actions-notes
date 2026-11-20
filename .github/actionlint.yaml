@@ -1,0 +1,6 @@
+# actionlint 1.7.12 doesn't know these GitHub-hosted labels yet; they exist
+# (actions/runner-images: Ubuntu2604-Readme.md). Remove once actionlint lists them.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
+    - ubuntu-26.04-arm

@@ -102,9 +102,12 @@ runs:
   steps:
     - id: gen
       shell: bash
+      env:
+        APP_NAME: ${{ inputs.application-name }}   # via env, never ${{ }} inside run: (injection, topic 37)
       run: |
         mkdir -p output
-        echo "app=${{ inputs.application-name }} sha=${{ github.sha }}" > output/build-info.txt
+        printf 'app=%s sha=%s
+' "$APP_NAME" "$GITHUB_SHA" > output/build-info.txt
         echo "path=output/build-info.txt" >> "$GITHUB_OUTPUT"
 ```
 

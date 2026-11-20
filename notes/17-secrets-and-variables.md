@@ -161,10 +161,10 @@ jobs:
           echo "Token is $API_TOKEN"                # masked in the log
           echo "Length: ${#API_TOKEN}"              # safe: prints only the length
 
+      # The documented pattern: map the secret into JOB-level env (jobs.<id>.env: HAS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN != '' }}),
+      # then test it in the step's if:. A step's OWN env isn't a reliable source for that step's if:.
       - name: Skip when the secret is missing
-        env:
-          API_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        if: env.API_TOKEN != ''                     # secrets.* can't be used directly in if:
+        if: env.HAS_TOKEN == 'true'                 # secrets.* can't be used directly in if:
         run: echo "secret is configured"
 ```
 
