@@ -1,0 +1,85 @@
+# Added by the notes audit (2026-11-20): keeps notes, links and code from drifting apart.
+# Every action is pinned to a full commit SHA (update with Dependabot/Renovate).
+name: Lint
+
+on:
+  push:
+    branches: [main, notes-rewrite]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  links:
+    name: Internal Markdown links resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # --offline: check links between notes and to files in the repo (fast, no flaky network).
+      # Links into the OTHER notes folders (../../Jenkins/…) are separate repos on GitHub, so they are skipped here.
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --offline --no-progress
+            --exclude '/(Ansible|CKA-Certification-Course-2025|Docker|GitHub-Actions-Basics-To-Production|Jenkins|linux-mastery-rhel|Terraform)/'
+            './**/*.md'
+          fail: true
+
+  actions:
+    name: Workflows (actionlint + zizmor)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Collect workflow files (not composite action.yml, not K8s manifests)
+        run: |
+          find notes/code \( -name '*.yml' -o -name '*.yaml' \) \
+            -not -name 'action.yml' -not -path '*/kubernetes/*' -not -path '*/node_modules/*' \
+            -not -name 'eks-config.yaml' | sort > workflow-files.txt
+          cat workflow-files.txt
+      # actionlint also runs shellcheck on every run: script (shellcheck is inside the image)
+      - name: actionlint
+        run: xargs docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color < workflow-files.txt
+      # zizmor: GitHub Actions security audit (injection, unpinned actions, excessive permissions, ...)
+      - name: zizmor
+        run: xargs pipx run zizmor==1.32.0 --offline --min-severity medium < workflow-files.txt
+
+  hadolint:
+    name: Dockerfiles (hadolint)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r f; do
+            echo "== $f"
+            docker run --rm -i hadolint/hadolint:v2.15.1 hadolint --failure-threshold warning - < "$f" || status=1
+          done < <(find notes/code -name Dockerfile -not -path '*/node_modules/*')
+          exit "$status"
+
+  kubeconform:
+    name: Kubernetes manifests (kubeconform)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          docker run --rm -v "$PWD:/w" ghcr.io/yannh/kubeconform:v0.8.0 \
+            -strict -summary -ignore-missing-schemas /w/notes/code/capstone/kubernetes/dev /w/notes/code/capstone/kubernetes/prod /w/notes/code/capstone/kubernetes/deployer-rbac.yaml
