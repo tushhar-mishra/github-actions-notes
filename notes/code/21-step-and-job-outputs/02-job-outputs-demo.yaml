@@ -3,6 +3,10 @@ name: 02 - Job Outputs Demo
 on:
   workflow_dispatch:
 
+# Least privilege: these demo jobs only read the repo.
+permissions:
+  contents: read
+
 jobs:
   deploy-job:
     runs-on: ubuntu-latest

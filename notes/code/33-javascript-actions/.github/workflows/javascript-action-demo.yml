@@ -3,6 +3,10 @@ name: JavaScript Action Demo
 on:
   workflow_dispatch:
 
+# Least privilege: these demo jobs only read the repo.
+permissions:
+  contents: read
+
 jobs:
   demo-job:
     runs-on: ubuntu-latest
@@ -11,6 +15,8 @@ jobs:
 
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install Action Dependencies
         working-directory: ./.github/actions/workflow-summary

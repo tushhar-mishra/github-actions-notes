@@ -3,6 +3,10 @@ name: 03 - Reusable Workflow Outputs Demo
 on:
   workflow_dispatch:
 
+# Least privilege: these demo jobs only read the repo.
+permissions:
+  contents: read
+
 jobs:
   deploy-job:
     uses: ./.github/workflows/deploy-application.yaml

@@ -1,6 +1,8 @@
 name: CWVJ Deploy | DEV
 
 on:
+  # zizmor: ignore[dangerous-triggers] -- guarded below: runs only for a successful CI run of a PUSH
+  # to this repository (event == 'push' and head_repository == this repo), never for fork PRs.
   workflow_run:
     workflows:
       - "CWVJ CI | Build, Scan and Publish"
@@ -49,8 +51,11 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Find the published image digests
+        id: images
         env:
           CI_SHA: ${{ github.event.workflow_run.head_sha }}
+          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
         run: |
           set -euo pipefail
 
@@ -74,9 +79,11 @@ jobs:
             exit 1
           fi
 
-          echo "BACKEND_IMAGE=${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/cwvj-mega-backend@${BACKEND_DIGEST}" >> "$GITHUB_ENV"
-
-          echo "FRONTEND_IMAGE=${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/cwvj-mega-frontend@${FRONTEND_DIGEST}" >> "$GITHUB_ENV"
+          # Step outputs, not $GITHUB_ENV: in a workflow_run (privileged) workflow, writing to GITHUB_ENV
+          # lets a value influence the environment of EVERY later step (zizmor: github-env).
+          REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          echo "backend=${REGISTRY}/cwvj-mega-backend@${BACKEND_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "frontend=${REGISTRY}/cwvj-mega-frontend@${FRONTEND_DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Configure kubectl
         run: |
@@ -85,6 +92,9 @@ jobs:
             --region "${{ vars.AWS_REGION }}"
 
       - name: Prepare DEV manifests
+        env:
+          BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
+          FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
         run: |
           sed -i \
             -e "s|__BACKEND_IMAGE__|${BACKEND_IMAGE}|g" \
